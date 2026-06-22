@@ -25,6 +25,13 @@ typedef struct
     int Prioridade;
 }Pessoa;
 
+typedef struct {
+    Monitor *mb;
+    Pessoa *pessoas;
+    int id;
+    int vezes;
+} ThreadArgs;
+
 
 void Monitor_init(Monitor *mb);
 void Monitor_insert(Monitor *mb, int item);

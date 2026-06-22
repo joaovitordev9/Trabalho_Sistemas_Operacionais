@@ -32,7 +32,7 @@ int Monitor_remove(Monitor *mb,Pessoa *pessoas) {
     int item = mb->Fila[mb->out];
     mb->out = (mb->out + 1) % PESSOAS;
     mb->count--;
-    printf("%s vai para casa\n",pessoas[item].Nome);
+    printf("%s está sendo atendido(a)",pessoas[item].Nome);
 
     pthread_cond_signal(&mb->not_full);
     pthread_mutex_unlock(&mb->mutex);
@@ -69,27 +69,41 @@ void Pessoa_init(Pessoa *pessoas)
 }
 
 void Mostra_fila(Monitor *mb){
-    for (int i = 0; i < THREADS i++)
+    for (int i = 0; i < THREADS ;i++)
     {
         printf("%d ",mb->Fila[i]);
     }
     printf("\n");
 }
 
-void Funcao_threads(Monitor *mb,Pessoa *pessoas){
+void Funcao_threads(void *Arg){
+
+    ThreadArgs *t = (ThreadArgs *)Arg;
+
+   
+
+    printf("%s vai para casa",t->pessoas[t->id].Nome);
+
+
     
 }
 
-void Criar_threads(Monitor *mb){
-    for (int i = 0; i < THREADS; i++)
-    {
-        thread_data[i].id = i; 
-        if (pthread_create(&mb->threads[i], NULL,Funcao_threads, &thread_data[i]) != 0) {
-            perror("Erro ao criar a thread");
-            return 1;
+void Criar_threads(Monitor *mb, Pessoa *pessoas, int vezes){
+    
+    for (int i = 0; i < THREADS; i++) {
+
+        ThreadArgs *args = malloc(sizeof(ThreadArgs));
+
+        args->mb = mb;
+        args->pessoas = pessoas;
+        args->id = i;
+        args->vezes = vezes;
+
+        if (pthread_create(&mb->threads[i],NULL,Funcao_threads,args) != 0) {
+            printf("\nErro ao Criar a Thread!\n");
+            exit(1);
         }
     }
-    
 }
 
 int main(int argc, char const *argv[])
