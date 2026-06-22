@@ -1,9 +1,11 @@
-#ifndef TRABALHO.H
-#define TRABALHO.H
+#ifndef TRABALHO_H
+#define TRABALHO_H
 
 //#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <pthread.h>
 
 #define THREADS 9
@@ -32,11 +34,15 @@ typedef struct {
     int vezes;
 } ThreadArgs;
 
-
+void Reorganiza_fila(Monitor *mb);
 void Monitor_init(Monitor *mb);
-void Monitor_insert(Monitor *mb, int item);
-int Monitor_remove(Monitor *mb);
-void Mostra_fila(Monitor *Infos);
+void Monitor_insert(Monitor *mb,Pessoa *pessoas,int item);
+void Monitor_remove(Monitor *mb,Pessoa *pessoas,int item);
+void Mostra_fila(Monitor *mb);
 void Pessoa_init(Pessoa *pessoas);
+void* Funcao_threads(void *Arg);
+void Proximo_na_fila(Monitor *mb,Pessoa *pessoas);
+void Criar_threads(Monitor *mb, Pessoa *pessoas, int vezes);
+
 
 #endif
