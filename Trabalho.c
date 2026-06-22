@@ -25,7 +25,7 @@ void Monitor_insert(Monitor *mb, Pessoa *pessoas, int item) {
     mb->in = (mb->in + 1) % PESSOAS;
     mb->count++;
 
-   Mostra_fila(mb,pessoas);
+
 
     if (mb->count == 1) {
         Proximo_na_fila(mb, pessoas);
@@ -53,7 +53,7 @@ void Monitor_remove(Monitor *mb, Pessoa *pessoas, int item) {
     pessoas[item].Atendido = 0;
     mb->count--;
 
-   Mostra_fila(mb,pessoas);
+
 
     Proximo_na_fila(mb, pessoas);
 
