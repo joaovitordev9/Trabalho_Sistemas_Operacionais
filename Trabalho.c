@@ -1,38 +1,11 @@
 #include "Trabalho.h"
 
-void Reorganiza_fila(Monitor *mb) {
-    int fila_temporaria[PESSOAS];
-    int indice_temp = 0;
-
-    // 1. Enche a fila temporária toda com -1
-    for (int i = 0; i < PESSOAS; i++) {
-        fila_temporaria[i] = -1;
-    }
-
-    // 2. Copia apenas os IDs válidos (!= -1) para o começo da fila temporária
-    for (int i = 0; i < PESSOAS; i++) {
-        if (mb->Fila[i] != -1) {
-            fila_temporaria[indice_temp] = mb->Fila[i];
-            indice_temp++;
-        }
-    }
-
-    // 3. Devolve os valores compactados para a fila original do Monitor
-    for (int i = 0; i < PESSOAS; i++) {
-        mb->Fila[i] = fila_temporaria[i];
-    }
-
-    // 4. Como todo mundo foi empurrado para o começo, a próxima posição 
-    // de inserção ('in') será exatamente igual à quantidade de pessoas na fila
-    mb->in = mb->count; 
-}
-
-
 void Monitor_init(Monitor *mb) {
     mb->count = mb->in = mb->out = 0;
     pthread_mutex_init(&mb->mutex, NULL);
     pthread_cond_init(&mb->not_empty, NULL);
     pthread_cond_init(&mb->not_full, NULL);
+    pthread_cond_init(&mb->chamado, NULL);
     for (int i = 0; i < PESSOAS; i++)
     {
         mb->Fila[i] = -1;
@@ -40,8 +13,10 @@ void Monitor_init(Monitor *mb) {
     
 }
 
-void Monitor_insert(Monitor *mb,Pessoa *pessoas,int item) {
+void Monitor_insert(Monitor *mb, Pessoa *pessoas, int item) {
     pthread_mutex_lock(&mb->mutex);
+
+    printf("%s está na fila do caixa\n", pessoas[item].Nome);
 
     while (mb->count == PESSOAS)
         pthread_cond_wait(&mb->not_full, &mb->mutex);
@@ -50,7 +25,7 @@ void Monitor_insert(Monitor *mb,Pessoa *pessoas,int item) {
     mb->in = (mb->in + 1) % PESSOAS;
     mb->count++;
 
-    printf("%s está na fila do caixa\n",pessoas[item].Nome);
+   Mostra_fila(mb,pessoas);
 
     if (mb->count == 1) {
         Proximo_na_fila(mb, pessoas);
@@ -60,30 +35,30 @@ void Monitor_insert(Monitor *mb,Pessoa *pessoas,int item) {
     pthread_mutex_unlock(&mb->mutex);
 }
 
-void Monitor_remove(Monitor *mb,Pessoa *pessoas,int item) {
+void Monitor_remove(Monitor *mb, Pessoa *pessoas, int item) {
     pthread_mutex_lock(&mb->mutex);
+    printf("%s vai para casa\n",pessoas[item].Nome);
 
-    while (mb->count == 0)
+    while (mb->count == 0){
         pthread_cond_wait(&mb->not_empty, &mb->mutex);
-    for (int i = 0; i < PESSOAS; i++)
-    {
-        if (mb->Fila[i] == item)
-        {
+    }
+
+    for (int i = 0; i < PESSOAS; i++) {
+        if (mb->Fila[i] == item) {
             mb->Fila[i] = -1;
             break;
         }
     }
-    
-    
+
     pessoas[item].Atendido = 0;
     mb->count--;
-    Reorganiza_fila(mb);
-    
-    printf("%s está sendo atendido(a)\n",pessoas[item].Nome);
+
+   Mostra_fila(mb,pessoas);
+
+    Proximo_na_fila(mb, pessoas);
 
     pthread_cond_signal(&mb->not_full);
     pthread_mutex_unlock(&mb->mutex);
-
 }
 
 void Pessoa_init(Pessoa pessoas[])
@@ -114,62 +89,55 @@ void Pessoa_init(Pessoa pessoas[])
     pessoas[7].Prioridade = 0;
 }
 
-void Mostra_fila(Monitor *mb){
-    for (int i = 0; i < THREADS ;i++)
-    {
-        printf("%d ",mb->Fila[i]);
-    }
-    printf("\n");
-}
-
 void* Funcao_threads(void *Arg) {
     ThreadArgs *t = (ThreadArgs *)Arg;
-    
+
     for (int i = 0; i < t->vezes; i++) {
 
         Monitor_insert(t->mb, t->pessoas, t->id);
+
         pthread_mutex_lock(&t->mb->mutex);
 
         while (!t->pessoas[t->id].Atendido) {
-            pthread_cond_wait(&t->mb->not_full, &t->mb->mutex);
+            pthread_cond_wait(&t->mb->chamado, &t->mb->mutex);
         }
-        pthread_mutex_unlock(&t->mb->mutex);
 
+        pthread_mutex_unlock(&t->mb->mutex);
+        printf("%s está sendo atendido(a)\n", t->pessoas[t->id].Nome);
         sleep(1);
 
         Monitor_remove(t->mb, t->pessoas, t->id);
-        printf("%s vai para casa\n", t->pessoas[t->id].Nome);
-
 
         pthread_mutex_lock(&t->mb->mutex);
         Proximo_na_fila(t->mb, t->pessoas);
         pthread_mutex_unlock(&t->mb->mutex);
 
-        int tempo_fora = (rand() % 3) + 3; // Gera 3, 4 ou 5
+        int tempo_fora = (rand() % 3) + 3;
         sleep(tempo_fora);
     }
-    
+
     return NULL;
 }
 
-void Proximo_na_fila(Monitor *mb,Pessoa pessoas[]){
-    int prox = -1;
-    int indice = -1;
-    for (int i = 0; i < PESSOAS; i++)
-    {
-        if (mb->Fila[i] != -1)
-        {
-            
-            if (pessoas[i].Prioridade > prox)
-            {
-                prox = pessoas[prox].Prioridade;
-                indice = mb->Fila[i];
-            }
+void Proximo_na_fila(Monitor *mb, Pessoa pessoas[]) {
+    int escolhido = -1;
+
+    for (int i = 0; i < PESSOAS; i++) {
+        if (mb->Fila[i] == -1){
+            continue;
+        }
+
+        int id = mb->Fila[i];
+
+        if (escolhido == -1 ||
+            pessoas[id].Prioridade > pessoas[escolhido].Prioridade) {
+            escolhido = id;
         }
     }
-    if (indice != -1) {
-        pessoas[indice].Atendido = 1;
-        pthread_cond_broadcast(&mb->not_full);
+
+    if (escolhido != -1) {
+        pessoas[escolhido].Atendido = 1;
+        pthread_cond_broadcast(&mb->chamado);
     }
 }
 
@@ -208,7 +176,7 @@ int main(int argc, char const *argv[])
  
     Criar_threads(&monitor, pessoas, rodar);
     
-    // Espera todas as threads terminarem antes de fechar o programa
+    
     for (int i = 0; i < THREADS; i++) {
         pthread_join(monitor.threads[i], NULL);
     }

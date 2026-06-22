@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#define THREADS 9
+#define THREADS 8
 #define PESSOAS 8
 
 typedef struct {
@@ -18,6 +18,7 @@ typedef struct {
     pthread_mutex_t mutex;
     pthread_cond_t not_empty;
     pthread_cond_t not_full;
+    pthread_cond_t chamado;
 }Monitor;
 
 typedef struct 
@@ -38,7 +39,6 @@ void Reorganiza_fila(Monitor *mb);
 void Monitor_init(Monitor *mb);
 void Monitor_insert(Monitor *mb,Pessoa *pessoas,int item);
 void Monitor_remove(Monitor *mb,Pessoa *pessoas,int item);
-void Mostra_fila(Monitor *mb);
 void Pessoa_init(Pessoa *pessoas);
 void* Funcao_threads(void *Arg);
 void Proximo_na_fila(Monitor *mb,Pessoa *pessoas);
