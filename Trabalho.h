@@ -13,7 +13,7 @@
 
 typedef struct {
     int Fila[THREADS];
-    int count, in, out;
+    int count, in;
     pthread_t threads[THREADS];
     pthread_mutex_t mutex;
     pthread_cond_t not_empty;
@@ -26,6 +26,7 @@ typedef struct
     int Atendido;
     char Nome[17];
     int Prioridade;
+    int inanicao;
 }Pessoa;
 
 typedef struct {

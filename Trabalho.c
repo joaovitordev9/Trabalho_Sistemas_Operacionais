@@ -1,7 +1,29 @@
 #include "Trabalho.h"
 
+void Reorganiza_fila(Monitor *mb) {
+    int novaFila[PESSOAS];
+    int j = 0;
+
+    for (int i = 0; i < PESSOAS; i++) {
+        if (mb->Fila[i] != -1) {
+            novaFila[j] = mb->Fila[i];
+            j++;
+        }
+    }
+
+    for (int i = j; i < PESSOAS; i++) {
+        novaFila[i] = -1;
+    }
+
+    for (int i = 0; i < PESSOAS; i++) {
+        mb->Fila[i] = novaFila[i];
+    }
+
+    mb->in = j;
+}
+
 void Monitor_init(Monitor *mb) {
-    mb->count = mb->in = mb->out = 0;
+    mb->count = mb->in = 0;
     pthread_mutex_init(&mb->mutex, NULL);
     pthread_cond_init(&mb->not_empty, NULL);
     pthread_cond_init(&mb->not_full, NULL);
@@ -53,7 +75,7 @@ void Monitor_remove(Monitor *mb, Pessoa *pessoas, int item) {
     pessoas[item].Atendido = 0;
     mb->count--;
 
-
+    Reorganiza_fila(mb);
 
     Proximo_na_fila(mb, pessoas);
 
@@ -63,9 +85,11 @@ void Monitor_remove(Monitor *mb, Pessoa *pessoas, int item) {
 
 void Pessoa_init(Pessoa pessoas[])
 {
+   
     for (int i = 0; i < PESSOAS; i++)
     {
         pessoas[i].Atendido = 0;
+        pessoas[i].inanicao = 0;
     }
 
     strcpy(pessoas[0].Nome, "Maria");
@@ -108,10 +132,6 @@ void* Funcao_threads(void *Arg) {
 
         Monitor_remove(t->mb, t->pessoas, t->id);
 
-        pthread_mutex_lock(&t->mb->mutex);
-        Proximo_na_fila(t->mb, t->pessoas);
-        pthread_mutex_unlock(&t->mb->mutex);
-
         int tempo_fora = (rand() % 3) + 3;
         sleep(tempo_fora);
     }
@@ -119,8 +139,10 @@ void* Funcao_threads(void *Arg) {
     return NULL;
 }
 
-void Proximo_na_fila(Monitor *mb, Pessoa pessoas[]) {
+void Proximo_na_fila(Monitor *mb, Pessoa pessoas[])
+{
     int escolhido = -1;
+    int pos_escolhido = -1;
 
     for (int i = 0; i < PESSOAS; i++) {
         if (mb->Fila[i] == -1){
@@ -129,14 +151,38 @@ void Proximo_na_fila(Monitor *mb, Pessoa pessoas[]) {
 
         int id = mb->Fila[i];
 
-        if (escolhido == -1 ||
-            pessoas[id].Prioridade > pessoas[escolhido].Prioridade) {
+        if (escolhido == -1 || pessoas[id].Prioridade > pessoas[escolhido].Prioridade) {
             escolhido = id;
         }
     }
 
+    for (int i = 0; i < PESSOAS; i++) {
+        if (mb->Fila[i] == escolhido) {
+            pos_escolhido = i;
+            break;
+        }
+    }
+
+    
+    for (int i = 0; i < pos_escolhido ; i++) {
+
+        if (mb->Fila[i] != -1 && mb->Fila[i] != escolhido){
+            
+            int id = mb->Fila[i];
+
+            pessoas[id].inanicao++;
+
+            if (pessoas[id].inanicao >= 2) {
+                pessoas[id].Prioridade++;
+                pessoas[id].inanicao = 0;
+
+                printf("Gerente detectou inanição, aumentando prioridade de %s\n",pessoas[id].Nome);
+            }
+        }
+    }
     if (escolhido != -1) {
         pessoas[escolhido].Atendido = 1;
+        pessoas[escolhido].inanicao = 0;
         pthread_cond_broadcast(&mb->chamado);
     }
 }
