@@ -205,14 +205,72 @@ void Criar_threads(Monitor *mb, Pessoa pessoas[], int vezes){
     }
 }
 
+void* Funcao_thread_gerente(void *Arg){
+    ThreadArgs *t = (ThreadArgs *)Arg;
+    int gravida = 0;
+    int idoso = 0;
+    int deficiente = 0;
+    int idc_gravida, idc_idoso, idc_deficiente;
+    while (1) {
+        sleep(5);
+
+        pthread_mutex_lock(t->mb->mutex);
+
+        printf("\n[GERENTE] Verificando Fila...\n");
+        for (int i = 0; i < THREADS; i++)
+        {
+            if (t->pessoas[t->mb->Fila[i]].Prioridade == 3)
+            {
+                gravida = 1;
+                idc_gravida = t->mb->Fila[i];
+                
+            }else if (t->pessoas[t->mb->Fila[i]].Prioridade == 2)
+            {
+                idoso = 1;
+                idc_idoso = t->mb->Fila[i];
+            }else if (t->pessoas[t->mb->Fila[i]].Prioridade == 1)
+            {
+                deficiente = 1;
+                idc_deficiente = t->mb->Fila[i];
+            }
+        }
+        
+        if (gravida && idoso && deficiente)
+        {
+            int vez = rand() % 3;
+            
+            switch (vez)
+            {
+            case 0:
+                t->pessoas[idc_gravida].Atendido = 1;
+                break;
+            case 1:
+                t->pessoas[idc_idoso].Atendido = 1;
+            case 2:
+                t->pessoas[idc_deficiente].Atendido = 1;    
+            
+            default:
+                break;
+            }
+        }
+        
+        pthread_cond_broadcast(t->mb->chamado);
+        pthread_mutex_unlock(t->mb->mutex);
+    }
+
+    return NULL;
+}
+
 
 int main(int argc, char const *argv[])
 {
+    srand(time(NULL));
     if (argc != 2)
     {
         printf("\nArgumentos Invalidos!\n");
         exit(1);
     }
+    pthread_t gerente;
     Monitor monitor;
     Pessoa pessoas[PESSOAS];
     int rodar = atoi(argv[1]);
@@ -220,6 +278,7 @@ int main(int argc, char const *argv[])
     Monitor_init(&monitor);
     Pessoa_init(pessoas);
  
+    pthread_create(&gerente, NULL, Funcao_thread_gerente, &monitor);
     Criar_threads(&monitor, pessoas, rodar);
     
     
