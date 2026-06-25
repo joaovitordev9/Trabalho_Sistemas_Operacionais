@@ -113,20 +113,96 @@ void Pessoa_init(Pessoa pessoas[])
     pessoas[7].Prioridade = 0;
 }
 
-void* Funcao_threads(void *Arg) {
+int Passar_vez(Monitor *mb, Pessoa *pessoas, int *escolhido)
+{
+    switch (pessoas[*escolhido].Prioridade)
+    {
+    case 3:
+    {
+        for (int i = 0; i < mb->count; i++)
+        {
+            int id = mb->Fila[i];
+            
+            if (pessoas[id].Prioridade == 1)
+            {
+                printf("Passei a vez de %s para %s\n", pessoas[*escolhido].Nome, pessoas[id].Nome);
+
+                pessoas[*escolhido].Atendido = 0;
+                *escolhido = id;
+                pessoas[*escolhido].Atendido = 1;
+
+                pthread_cond_signal(&mb->chamado);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    case 1:
+    {
+        for (int i = 0; i < mb->count; i++)
+        {
+            int id = mb->Fila[i];
+            
+            if (pessoas[id].Prioridade == 2)
+            {
+                printf("Passei a vez de %s para %s\n", pessoas[*escolhido].Nome, pessoas[id].Nome);
+
+                pessoas[*escolhido].Atendido = 0;
+                *escolhido = id;
+                pessoas[*escolhido].Atendido = 1;
+
+                pthread_cond_signal(&mb->chamado);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    case 2:
+    {
+        for (int i = 0; i < mb->count; i++)
+        {
+            int id = mb->Fila[i];
+
+            if (pessoas[id].Prioridade == 3)
+            {
+                printf("Passei a vez de %s para %s\n", pessoas[*escolhido].Nome, pessoas[id].Nome);
+
+                pessoas[*escolhido].Atendido = 0;
+                *escolhido = id;
+                pessoas[*escolhido].Atendido = 1;
+
+                pthread_cond_signal(&mb->chamado);
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    default:
+        return 0;
+    }
+}
+
+void* Funcao_threads(void *Arg)
+{
     ThreadArgs *t = (ThreadArgs *)Arg;
 
-    for (int i = 0; i < t->vezes; i++) {
-
+    for (int i = 0; i < t->vezes; i++)
+    {
         Monitor_insert(t->mb, t->pessoas, t->id);
 
         pthread_mutex_lock(&t->mb->mutex);
 
-        while (!t->pessoas[t->id].Atendido) {
+        
+        while (!t->pessoas[t->id].Atendido)
+        {
             pthread_cond_wait(&t->mb->chamado, &t->mb->mutex);
         }
 
         pthread_mutex_unlock(&t->mb->mutex);
+
         printf("%s está sendo atendido(a)\n", t->pessoas[t->id].Nome);
         sleep(1);
 
@@ -187,6 +263,94 @@ void Proximo_na_fila(Monitor *mb, Pessoa pessoas[])
     }
 }
 
+void* Funcao_thread_gerente(void *Arg){
+    ThreadArgs *t = (ThreadArgs *)Arg;
+    int gravida ,idoso ,deficiente;
+    int idc_gravida, idc_idoso, idc_deficiente;
+    while (1) {
+        sleep(5);
+        gravida = 0;
+        idoso = 0;
+        deficiente = 0;
+        pthread_mutex_lock(&t->mb->mutex);
+
+        
+        for (int i = 0; i < THREADS; i++)
+        {
+            if (t->mb->Fila[i] == -1)
+            { 
+                continue;
+            }
+            int id = t->mb->Fila[i];
+            if (t->pessoas[id].Prioridade == 3)
+            {
+                gravida = 1;
+                idc_gravida = id;
+                
+            }else if (t->pessoas[id].Prioridade == 2)
+            {
+                idoso = 1;
+                idc_idoso = id;
+            }else if (t->pessoas[id].Prioridade == 1)
+            {
+                deficiente = 1;
+                idc_deficiente = id;
+            }
+        }
+        int ocupado = 0;
+
+        for (int i = 0; i < PESSOAS; i++) {
+            if (t->pessoas[i].Atendido) {
+                ocupado = 1;
+                break;
+            }
+        }
+        if (gravida && idoso && deficiente)
+        {
+            int vez = rand() % 3;
+            
+            switch (vez)
+            {
+            case 0:
+                if (!ocupado) {
+                    t->pessoas[idc_gravida].Atendido = 1;
+                    printf("Gerente detectou deadlock, liberando %s para atendimento\n",t->pessoas[idc_gravida].Nome);
+                }
+                break;
+            case 1:
+                if (!ocupado) {
+                    t->pessoas[idc_idoso].Atendido = 1;
+                    printf("Gerente detectou deadlock, liberando %s para atendimento\n",t->pessoas[idc_idoso].Nome);
+                }
+                break;
+            case 2:
+                if (!ocupado) {
+                    t->pessoas[idc_deficiente].Atendido = 1;
+                    printf("Gerente detectou deadlock, liberando %s para atendimento\n",t->pessoas[idc_deficiente].Nome);
+                }
+                break;
+            default:
+                break;
+            }
+        }
+        
+        pthread_cond_broadcast(&t->mb->chamado);
+        pthread_mutex_unlock(&t->mb->mutex);
+    }
+
+    return NULL;
+}
+
+void Criar_thread_Gerente(Monitor *mb, Pessoa pessoas[]){
+    pthread_t gerente;
+    ThreadArgs *gerenteArgs = malloc(sizeof(ThreadArgs));
+
+    gerenteArgs->mb = mb;
+    gerenteArgs->pessoas = pessoas;
+    
+    pthread_create(&gerente, NULL,Funcao_thread_gerente,gerenteArgs);
+}
+
 void Criar_threads(Monitor *mb, Pessoa pessoas[], int vezes){
     
     for (int i = 0; i < THREADS; i++) {
@@ -205,61 +369,6 @@ void Criar_threads(Monitor *mb, Pessoa pessoas[], int vezes){
     }
 }
 
-void* Funcao_thread_gerente(void *Arg){
-    ThreadArgs *t = (ThreadArgs *)Arg;
-    int gravida = 0;
-    int idoso = 0;
-    int deficiente = 0;
-    int idc_gravida, idc_idoso, idc_deficiente;
-    while (1) {
-        sleep(5);
-
-        pthread_mutex_lock(t->mb->mutex);
-
-        printf("\n[GERENTE] Verificando Fila...\n");
-        for (int i = 0; i < THREADS; i++)
-        {
-            if (t->pessoas[t->mb->Fila[i]].Prioridade == 3)
-            {
-                gravida = 1;
-                idc_gravida = t->mb->Fila[i];
-                
-            }else if (t->pessoas[t->mb->Fila[i]].Prioridade == 2)
-            {
-                idoso = 1;
-                idc_idoso = t->mb->Fila[i];
-            }else if (t->pessoas[t->mb->Fila[i]].Prioridade == 1)
-            {
-                deficiente = 1;
-                idc_deficiente = t->mb->Fila[i];
-            }
-        }
-        
-        if (gravida && idoso && deficiente)
-        {
-            int vez = rand() % 3;
-            
-            switch (vez)
-            {
-            case 0:
-                t->pessoas[idc_gravida].Atendido = 1;
-                break;
-            case 1:
-                t->pessoas[idc_idoso].Atendido = 1;
-            case 2:
-                t->pessoas[idc_deficiente].Atendido = 1;    
-            
-            default:
-                break;
-            }
-        }
-        
-        pthread_cond_broadcast(t->mb->chamado);
-        pthread_mutex_unlock(t->mb->mutex);
-    }
-
-    return NULL;
-}
 
 
 int main(int argc, char const *argv[])
@@ -270,7 +379,6 @@ int main(int argc, char const *argv[])
         printf("\nArgumentos Invalidos!\n");
         exit(1);
     }
-    pthread_t gerente;
     Monitor monitor;
     Pessoa pessoas[PESSOAS];
     int rodar = atoi(argv[1]);
@@ -278,8 +386,8 @@ int main(int argc, char const *argv[])
     Monitor_init(&monitor);
     Pessoa_init(pessoas);
  
-    pthread_create(&gerente, NULL, Funcao_thread_gerente, &monitor);
     Criar_threads(&monitor, pessoas, rodar);
+    Criar_thread_Gerente(&monitor, pessoas);
     
     
     for (int i = 0; i < THREADS; i++) {
