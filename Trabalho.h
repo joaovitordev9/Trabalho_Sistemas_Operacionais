@@ -46,7 +46,7 @@ void Proximo_na_fila(Monitor *mb,Pessoa *pessoas);
 void Criar_threads(Monitor *mb, Pessoa *pessoas, int vezes);
 void* Funcao_thread_gerente(void *Arg);
 void Criar_thread_Gerente(Monitor *mb, Pessoa pessoas[]);
-int Passar_vez(Monitor *mb, Pessoa *pessoas,int *escolhido);
+int Passar_vez(Monitor *mb, Pessoa *pessoas,int escolhido);
 
 
 #endif

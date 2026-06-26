@@ -47,14 +47,13 @@ void Monitor_insert(Monitor *mb, Pessoa *pessoas, int item) {
     mb->in = (mb->in + 1) % PESSOAS;
     mb->count++;
 
-
-
     if (mb->count == 1) {
         Proximo_na_fila(mb, pessoas);
     }
 
     pthread_cond_signal(&mb->not_empty);
     pthread_mutex_unlock(&mb->mutex);
+    
 }
 
 void Monitor_remove(Monitor *mb, Pessoa *pessoas, int item) {
@@ -113,75 +112,72 @@ void Pessoa_init(Pessoa pessoas[])
     pessoas[7].Prioridade = 0;
 }
 
-int Passar_vez(Monitor *mb, Pessoa *pessoas, int *escolhido)
+int Passar_vez(Monitor *mb, Pessoa *pessoas, int escolhido)
 {
-    switch (pessoas[*escolhido].Prioridade)
+    switch (pessoas[escolhido].Prioridade)
     {
-    case 3:
-    {
-        for (int i = 0; i < mb->count; i++)
+        case 3:
         {
-            int id = mb->Fila[i];
-            
-            if (pessoas[id].Prioridade == 1)
+            for (int i = 0; i < mb->count; i++)
             {
-                printf("Passei a vez de %s para %s\n", pessoas[*escolhido].Nome, pessoas[id].Nome);
-
-                pessoas[*escolhido].Atendido = 0;
-                *escolhido = id;
-                pessoas[*escolhido].Atendido = 1;
-
-                pthread_cond_signal(&mb->chamado);
-                return 1;
+                int id = mb->Fila[i];
+                
+                if (pessoas[id].Prioridade == 1)
+                {
+                    printf("Passei a vez de %s para %s\n", pessoas[escolhido].Nome, pessoas[id].Nome);
+                    return id;
+                }
             }
+            return escolhido;
         }
-        return 0;
-    }
 
-    case 1:
-    {
-        for (int i = 0; i < mb->count; i++)
+        case 1:
         {
-            int id = mb->Fila[i];
-            
-            if (pessoas[id].Prioridade == 2)
+            for (int i = 0; i < mb->count; i++)
             {
-                printf("Passei a vez de %s para %s\n", pessoas[*escolhido].Nome, pessoas[id].Nome);
-
-                pessoas[*escolhido].Atendido = 0;
-                *escolhido = id;
-                pessoas[*escolhido].Atendido = 1;
-
-                pthread_cond_signal(&mb->chamado);
-                return 1;
+                int id = mb->Fila[i];
+                
+                if (pessoas[id].Prioridade == 2)
+                {
+                    printf("Passei a vez de %s para %s\n", pessoas[escolhido].Nome, pessoas[id].Nome);
+                    return id;
+                }
             }
+            return escolhido;
         }
-        return 0;
-    }
 
-    case 2:
-    {
-        for (int i = 0; i < mb->count; i++)
+        case 2:
         {
-            int id = mb->Fila[i];
-
-            if (pessoas[id].Prioridade == 3)
+            for (int i = 0; i < mb->count; i++)
             {
-                printf("Passei a vez de %s para %s\n", pessoas[*escolhido].Nome, pessoas[id].Nome);
+                int id = mb->Fila[i];
 
-                pessoas[*escolhido].Atendido = 0;
-                *escolhido = id;
-                pessoas[*escolhido].Atendido = 1;
-
-                pthread_cond_signal(&mb->chamado);
-                return 1;
+                if (pessoas[id].Prioridade == 3)
+                {
+                    printf("Passei a vez de %s para %s\n", pessoas[escolhido].Nome, pessoas[id].Nome);
+                    return id;
+                }
             }
+            return escolhido;
         }
-        return 0;
-    }
+        case 0:
+        {
+            for (int i = 0; i < mb->count; i++)
+            {
+                int id = mb->Fila[i];
 
-    default:
-        return 0;
+                if (pessoas[id].Prioridade > pessoas[escolhido].Prioridade)
+                {
+                    printf("Passei a vez de %s para %s\n", pessoas[escolhido].Nome, pessoas[id].Nome);
+                    return id;
+                }
+            }
+            return escolhido;
+        }
+        default:{
+            escolhido = 1;
+            return escolhido;
+        }
     }
 }
 
@@ -195,7 +191,6 @@ void* Funcao_threads(void *Arg)
 
         pthread_mutex_lock(&t->mb->mutex);
 
-        
         while (!t->pessoas[t->id].Atendido)
         {
             pthread_cond_wait(&t->mb->chamado, &t->mb->mutex);
@@ -231,6 +226,12 @@ void Proximo_na_fila(Monitor *mb, Pessoa pessoas[])
             escolhido = id;
         }
     }
+    int id_escolhido;
+    do{
+        id_escolhido = escolhido;
+        escolhido = Passar_vez(mb,pessoas,id_escolhido);
+        sleep(1);
+    } while (escolhido != id_escolhido);
 
     for (int i = 0; i < PESSOAS; i++) {
         if (mb->Fila[i] == escolhido) {
@@ -273,7 +274,7 @@ void* Funcao_thread_gerente(void *Arg){
         idoso = 0;
         deficiente = 0;
         pthread_mutex_lock(&t->mb->mutex);
-
+        printf("\nGerente TA AKKKKKKKKKKKKKKKKKKKKKKKK\n");
         
         for (int i = 0; i < THREADS; i++)
         {
