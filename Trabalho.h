@@ -1,7 +1,6 @@
 #ifndef TRABALHO_H
 #define TRABALHO_H
 
-//#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +25,7 @@ typedef struct
     int Atendido;
     char Nome[17];
     int Prioridade;
+    int PrioridadeOriginal;
     int inanicao;
 }Pessoa;
 
@@ -42,11 +42,12 @@ void Monitor_insert(Monitor *mb,Pessoa *pessoas,int item);
 void Monitor_remove(Monitor *mb,Pessoa *pessoas,int item);
 void Pessoa_init(Pessoa *pessoas);
 void* Funcao_threads(void *Arg);
-void Proximo_na_fila(Monitor *mb,Pessoa *pessoas);
+int Proximo_na_fila(Monitor *mb,Pessoa *pessoas);
 void Criar_threads(Monitor *mb, Pessoa *pessoas, int vezes);
 void* Funcao_thread_gerente(void *Arg);
 void Criar_thread_Gerente(Monitor *mb, Pessoa pessoas[]);
-int Passar_vez(Monitor *mb, Pessoa *pessoas,int escolhido);
+int Tem_deadlock(Monitor *mb, Pessoa pessoas[]);
+int preferencia(int p1, int p2);
 
 
 #endif
