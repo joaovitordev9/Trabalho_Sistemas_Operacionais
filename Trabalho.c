@@ -118,9 +118,19 @@ int preferencia(int p1, int p2) {
     if (p1 == 0) return 0;
     if (p2 == 0) return 1;
 
-    return (p1 == 3 && p2 == 2) ||
-           (p1 == 2 && p2 == 1) ||
-           (p1 == 1 && p2 == 3);
+    if (p1 == 3 && p2 == 2) {
+        return 1;
+    }
+
+    if (p1 == 2 && p2 == 1) {
+        return 1;
+    }
+
+    if (p1 == 1 && p2 == 3) {
+        return 1;
+    }
+
+    return 0;
 }
 
 int Tem_deadlock(Monitor *mb, Pessoa pessoas[]) {
@@ -144,7 +154,11 @@ int Tem_deadlock(Monitor *mb, Pessoa pessoas[]) {
         }
     }
 
-    return gravida && idoso && deficiente;
+    if (gravida == 1 && idoso == 1 && deficiente == 1) {
+        return 1;
+    }
+
+    return 0;
 }
 
 void* Funcao_threads(void *Arg)
