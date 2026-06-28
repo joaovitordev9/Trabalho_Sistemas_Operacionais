@@ -42,12 +42,12 @@ void Monitor_insert(Monitor *mb,Pessoa *pessoas,int item);
 void Monitor_remove(Monitor *mb,Pessoa *pessoas,int item);
 void Pessoa_init(Pessoa *pessoas);
 void* Funcao_threads(void *Arg);
-int Proximo_na_fila(Monitor *mb,Pessoa *pessoas);
+void Proximo_na_fila(Monitor *mb,Pessoa *pessoas);
 void Criar_threads(Monitor *mb, Pessoa *pessoas, int vezes);
 void* Funcao_thread_gerente(void *Arg);
 void Criar_thread_Gerente(Monitor *mb, Pessoa pessoas[]);
-int Tem_deadlock(Monitor *mb, Pessoa pessoas[]);
-int preferencia(int p1, int p2);
+int Passar_vez(Monitor *mb, Pessoa *pessoas, int escolhido, int candidato);
+
 
 
 #endif
